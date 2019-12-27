@@ -1,0 +1,129 @@
+﻿--Measure Example 1
+Sales Amount Multiple Items :=
+SUMX (
+    FILTER ( Sales, Sales[Quantity] > 1 ), --Whenever you reference the content of a table, you can replace the reference with the result of a table function
+    Sales[Quantity] * Sales[Net Price]
+)
+
+--Store table to variable
+Sales Amount Multiple Items :=
+VAR
+    MultipleItemSales = FILTER ( Sales, Sales[Quantity] > 1 ) 
+RETURN
+    SUMX (
+        MultipleItemSales,
+        Sales[Quantity] * Sales[Unit Price]
+    )
+
+--Table functions like FILTER, RELATEDTABLE etc. return a table
+--RELATEDTABLE in a calculated column. Gets all lines in Sales that are linked to a Product line.
+'Product'[Product Sales Amount] =
+SUMX (
+    RELATEDTABLE ( Sales ),
+    Sales[Quantity] * Sales[Unit Price]
+)
+
+
+--Nested table functions
+'Product'[Product Sales Amount Multiple Items] =
+SUMX (
+    FILTER (
+        RELATEDTABLE ( Sales ),
+        Sales[Quantity] > 1
+    ),
+    Sales[Quantity] * Sales[Unit Price]
+)
+
+
+--Calculated table
+ExpensiveProducts =
+FILTER (
+    'Product',
+    'Product'[Unit Price] > 3000
+)
+
+
+
+--EVALUATE can be used in tools like DAX studio to check the results of a table expression
+EVALUATE
+FILTER (
+    'Product',
+    'Product'[Unit Price] > 3000
+)
+
+
+--The following two produce the same result. However, performance might be different on large tables depending on the selectivity of the conditions.
+--If one condition is more selective than the other, applying the most selective condition first by using a nested FILTER function is considered best practice.
+FabrikamHighMarginProducts =
+FILTER (
+    FILTER (
+        'Product',
+        'Product'[Brand] = "Fabrikam"
+    ),
+    'Product'[Unit Price] > 'Product'[Unit Cost] * 3
+)
+
+FabrikamHighMarginProducts =
+FILTER (
+    'Product',
+    AND (
+        'Product'[Brand] = "Fabrikam",
+        'Product'[Unit Price] > 'Product'[Unit Cost] * 3
+    )
+)
+
+
+
+--COUNTROWS
+NumOfRedProducts :=
+COUNTROWS (
+    FILTER ( 'Product', 'Product'[Color] = "Red" )
+)
+
+
+--ALL function is useful when we need to calc ratios
+Sales Amount :=
+SUMX (
+    Sales,
+    Sales[Quantity] * Sales[Net Price]
+)
+
+All Sales Amount :=
+SUMX (
+    ALL ( Sales ),
+    Sales[Quantity] * Sales[Net Price]
+)
+
+
+Sales Pct := DIVIDE ( [Sales Amount], [All Sales Amount] )
+
+--ALL can be used on columns too
+--ALL on a column. Returns all distinct values
+Categories = ALL ( 'Product'[Category] )
+--ALL on multiple columns returns all combinations of values in those columns
+Categories =
+ALL (
+    'Product'[Category],
+    'Product'[Subcategory]
+)
+
+--ALLEXCEPT excludes columns
+
+--VALUES vs ALL
+NumOfAllColors := COUNTROWS ( ALL ( 'Product'[Color] ) )
+NumOfColors := COUNTROWS ( VALUES ( 'Product'[Color] ) )
+NumOfDistinctColors := COUNTROWS ( DISTINCT ( 'Product'[Color] ) )
+--NumOfAllColors counts all the colors of the Product table, whereas NumOfColors counts only the ones that—given the filter in the report—are visible.
+--DISTINCT do the same without blanks and duplicates
+
+--DIVIDE
+AvgSalesPerProduct :=
+DIVIDE (
+    SUMX (
+        Sales,
+        Sales[Quantity] * Sales[Net Price]
+    ),
+    COUNTROWS (
+        VALUES ( 'Product'[Product Code] )
+    )
+)
